@@ -1,0 +1,122 @@
+!!!
+%head
+  %meta{ charset:"utf-8" }
+  %script{ src:"https://polyfill.io/v3/polyfill.min.js?features=es6" }
+  %script{ id:"MathJax-script", async: 'async', src:"https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"}
+  :css
+    h1{
+      border-top : solid 2px #bbb;
+      border-left : solid 16px #bbb;
+      background-color: #f8f8f8;
+    }
+    h2{
+      border-top : solid 2px #bbb;
+      border-left : solid 8px #bbb;
+      background-color: #f8f8f8;
+    }
+    h3{
+      border-top : solid 1px #bbb;
+      border-left : solid 4px #bbb;
+      background-color: #f8f8f8;
+    }
+    h4{
+      background-color: #f8f8f8;
+    }
+    table{
+      margin-left:2em;
+    }
+    .math{
+      margin-left:2em;
+    }
+    tr:nth-child(even){
+      background:#F2F2F2;
+    }
+    tr:nth-child(odd){
+      background:#d8d8d8;
+    }
+    th,td{
+      padding:5px;
+    }
+  :javascript
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']]
+      }
+    }
+  %title
+    mledc
+%body
+  %h1 計算内容
+  %h2 データの取得
+  %p
+    データは 2byte ずつ取得する。端数がある場合は末尾にもう 1byte ゼロがあることにする。
+    %br
+    →
+    %code 0x12, 0x34, 0x56
+    と
+    %code 0x12, 0x34, 0x56, 0x00
+    の区別はつかない。
+  %p
+    というわけで、入力バイト数の半分(端数切り上げ)個の、符号なし16ビット整数が手に入る
+  %h2 計算
+  %h3 計算に必要な定数
+  %p
+    以下の定数を必要とする。
+  %table
+    %tr
+      %th 変数名
+      %th 説明
+      %th 補足
+    %tr
+      %td
+        %code init
+      %td 初期値
+      %td 2進数で0と1がいい感じに混ざっている値がいいんじゃないかと思う。
+    %tr
+      %td
+        %code mul
+      %td 乗数
+      %td
+        2進数で0と1がいい感じに混ざっている
+        %b 素数
+        がいいんじゃないかと思う。
+  %h3 計算に必要な変数
+  %p
+    実質的に 32bit 符号なし整数1個。この変数の名前を
+    %code c
+    とする。
+  %h3 初期化
+  %p
+    %code c
+    を
+    %code init
+    で初期化する
+  %h3 更新
+  %p
+    符号なし16bit整数の入力データ
+    %code x
+    を受け取り、以下の計算をする:
+  %p.math
+    $c ← rol(c) \times mul + x$
+  %p
+    関数 $rol$ は、1bit 左ローテート。数学っぽく書くと以下の通り:
+  %p.math
+    $ rol(x) = mod( \lfloor x \times 2 + x \div 2^{31} \rfloor,\: 2^{32} ) $
+  %p
+    関数 $mod$ は剰余関数。数学っぽく書くと以下の通り:
+  %p.math
+    $ mod(a,\: n) = a - n \lfloor a \div n \rfloor $
+  %h2 誤り検出性能
+  %p
+    正直言って、よくわからない。
+  %p
+    1〜255 バイトまでのデータを乱数で作り、1〜32bit ぐらいのノイズを付加し、誤り検出符号の値が変わるかどうか、1200万回ぐらい調べたが、全てのケースでエラーを検出した。
+  %p
+    実験結果は悪くないので、そんなに酷いってことはないわけだけど、どれほど有意義な計算なのかはわからない。
+  %h1 計算量
+  %p
+    計算内容が簡単な上にメモリアクセスが少ないので、計算量は CRC32 と比べるとだいぶ少ない。
+    %br
+    データのフェッチが 16bit なのも大きいと思う。
+    %br
+    手元での測定( Raspberry Pi 3 Model B+, MacBook Pro (Retina, 15inch, Mid2015) )の結果を見ると、CRC32の2〜4倍ほど速い。
