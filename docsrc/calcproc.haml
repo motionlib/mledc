@@ -3,7 +3,12 @@
   %meta{ charset:"utf-8" }
   %script{ src:"https://polyfill.io/v3/polyfill.min.js?features=es6" }
   %script{ id:"MathJax-script", async: 'async', src:"https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"}
+  %script{ src:"https://www.gstatic.com/charts/loader.js"}
+
   :css
+    body{
+      margin:1em;
+    }
     h1{
       border-top : solid 2px #bbb;
       border-left : solid 16px #bbb;
@@ -37,11 +42,49 @@
     th,td{
       padding:5px;
     }
+    #barchart_body{
+      padding: 1em;
+      margin: 1em;
+      background-color: #eee;
+      border: solid #888 2px;
+    }
+    #barchart_material{
+      float:right;
+      width:50%;
+    }
+
   :javascript
     window.MathJax = {
       tex: {
         inlineMath: [['$', '$'], ['\\(', '\\)']]
       }
+    }
+    google.charts.load('current', {'packages':['bar']});
+    google.charts.setOnLoadCallback(drawChart);
+    function drawChart() {
+      var data = google.visualization.arrayToDataTable([
+        ["", 'mledc', 'crc32'],
+        ["1byte × 262144 times",52189*1e-3,371162*1e-3],
+        ["4bytes × 65536 times",53498*1e-3,342461*1e-3],
+        ["16bytes × 16384 times",102950*1e-3,589798*1e-3],
+        ["64bytes × 4096 times",269216*1e-3,975455*1e-3],
+        ["256bytes × 1024 times",357122*1e-3,1148532*1e-3],
+      ]);
+      var options = {
+        hAxis: {
+          format: "decimal",
+        },
+        backgroundColor:"#eee",
+        bar: {groupWidth: "80%"},
+        bars: 'horizontal', // Required for Material Bar Charts.
+        axes: {
+          x: {
+            0: { side: 'top', label: 'Execution time in μs'},
+          }
+        },
+      };
+      var chart = new google.charts.Bar(document.getElementById('barchart_body'));
+      chart.draw(data, google.charts.Bar.convertOptions(options));
     }
   %title
     mledc
@@ -113,10 +156,12 @@
     1〜255 バイトまでのデータを乱数で作り、1〜32bit ぐらいのノイズを付加し、誤り検出符号の値が変わるかどうか、1200万回ぐらい調べたが、全てのケースでエラーを検出した。
   %p
     実験結果は悪くないので、そんなに酷いってことはないわけだけど、どれほど有意義な計算なのかはわからない。
+  #barchart_material
+    #barchart_body
   %h1 計算量
   %p
     計算内容が簡単な上にメモリアクセスが少ないので、計算量は CRC32 と比べるとだいぶ少ない。
     %br
     データのフェッチが 16bit なのも大きいと思う。
     %br
-    手元での測定( Raspberry Pi 3 Model B+, MacBook Pro (Retina, 15inch, Mid2015) )の結果を見ると、CRC32の2〜4倍ほど速い。
+    手元での測定( MacBook Pro (13-inch, 2017, Two Thunderbolt 3 ports), 右図 )の結果を見ると、CRC32 よりだいぶ速い。
