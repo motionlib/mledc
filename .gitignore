@@ -33,3 +33,7 @@
 
 # ruby
 vendor
+
+# macOS
+
+.DS_Store
