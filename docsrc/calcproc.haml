@@ -9,6 +9,9 @@
     body{
       margin:1em;
     }
+    p, table {
+      font-size:10pt;
+    }
     h1{
       border-top : solid 2px #bbb;
       border-left : solid 16px #bbb;
@@ -30,8 +33,11 @@
     table{
       margin-left:2em;
     }
-    .math{
-      margin-left:2em;
+    p{
+      margin-left:1em;
+    }
+    p.math{
+      margin-left:2.5em;
     }
     tr:nth-child(even){
       background:#F2F2F2;
@@ -50,7 +56,6 @@
     }
     #barchart_material{
       float:right;
-      width:50%;
     }
 
   :javascript
@@ -89,6 +94,15 @@
   %title
     mledc
 %body
+  #barchart_material
+    #barchart_body
+  %h1 計算量
+  %p
+    計算内容が簡単な上にメモリアクセスが少ないので、計算量は CRC32 と比べるとだいぶ少ない。
+    %br
+    データのフェッチが 16bit なのも大きいと思う。
+    %br
+    手元での測定( MacBook Pro (13-inch, 2017, Two Thunderbolt 3 ports), 右図 )の結果を見ると、CRC32 よりだいぶ速い。
   %h1 計算内容
   %h2 データの取得
   %p
@@ -156,12 +170,3 @@
     1〜255 バイトまでのデータを乱数で作り、1〜32bit ぐらいのノイズを付加し、誤り検出符号の値が変わるかどうか、1200万回ぐらい調べたが、全てのケースでエラーを検出した。
   %p
     実験結果は悪くないので、そんなに酷いってことはないわけだけど、どれほど有意義な計算なのかはわからない。
-  #barchart_material
-    #barchart_body
-  %h1 計算量
-  %p
-    計算内容が簡単な上にメモリアクセスが少ないので、計算量は CRC32 と比べるとだいぶ少ない。
-    %br
-    データのフェッチが 16bit なのも大きいと思う。
-    %br
-    手元での測定( MacBook Pro (13-inch, 2017, Two Thunderbolt 3 ports), 右図 )の結果を見ると、CRC32 よりだいぶ速い。
