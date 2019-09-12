@@ -248,7 +248,7 @@ struct tester
 void noisetest::run()
 {
   tester t;
-  for (int i = 0; i < 10; ++i)
+  for (int i = 0; i < 100; ++i)
   {
     for (size_t len = 1; len < 5; ++len)
     {

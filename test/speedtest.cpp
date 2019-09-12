@@ -103,7 +103,7 @@ struct speed_tester
 
     // ["1bytes × 262144 times", 55331e-3,505226e-3,341696e-3],
     std::cout
-        << "['" << byteCount << "bytes × " << testCount << " times', "
+        << "['" << byteCount << "bytes × " << (testCount*3) << " times', "
         << tick_n * 1e-3 << ", "
         << tick_c * 1e-3 << ", "
         << tick_f * 1e-3 << "],\n";
