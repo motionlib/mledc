@@ -7,6 +7,7 @@
 
 #include "crc32.hpp"
 #include "mledc.hpp"
+#include "fletcher32.hpp"
 #include "speedtest.h"
 
 using namespace std;
@@ -18,7 +19,7 @@ template <size_t byteCount> //
 struct speed_tester
 {
   mt19937_64 rng = mt19937_64{0};
-  static constexpr size_t testCount = (1<<18)/byteCount;
+  static constexpr size_t testCount = (1 << 18) / byteCount;
   crc32 crc;
   using ary = array<uint8_t, byteCount>;
   uniform_int_distribution<uint16_t> dist //uint8_t にすると cl.exe でエラーになるので仕方なく。
@@ -34,6 +35,21 @@ struct speed_tester
     for (auto const &a : arrays)
     {
       sum += mledc::calculate<mledc_init, mledc_mul>(a.data(), a.size());
+    }
+    auto end = clock::now();
+    if (sum == 0)
+    { // In order not to be killed by the optimizer
+      cout << "I was surprised!\n";
+    }
+    return chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+  }
+  int64_t run_f32(vector<ary> const &arrays)
+  {
+    std::uint32_t sum = 0;
+    auto start = clock::now();
+    for (auto const &a : arrays)
+    {
+      sum += fletcher32::calculate<0xffff, 0xffff>(a.data(), a.size());
     }
     auto end = clock::now();
     if (sum == 0)
@@ -71,23 +87,36 @@ struct speed_tester
     // Preparation gymnastics
     run_mledc(arrays);
     run_crc(arrays);
+    run_f32(arrays);
     // Action!
     auto tick_n = run_mledc(arrays);
     auto tick_c = run_crc(arrays);
-    // Act in a different order
+    auto tick_f = run_f32(arrays);
+    // Act in a different order #1
     tick_c += run_crc(arrays);
+    tick_f += run_f32(arrays);
     tick_n += run_mledc(arrays);
-    std::cout << byteCount << "," << testCount << "," << tick_n << "," << tick_c << "\n";
+    // Act in a different order #2
+    tick_f += run_f32(arrays);
+    tick_n += run_mledc(arrays);
+    tick_c += run_crc(arrays);
+
+    // ["1bytes × 262144 times", 55331e-3,505226e-3,341696e-3],
+    std::cout
+        << "['" << byteCount << "bytes × " << testCount << " times', "
+        << tick_n * 1e-3 << ", "
+        << tick_c * 1e-3 << ", "
+        << tick_f * 1e-3 << "],\n";
   }
 };
 } // namespace
 
 void speedtest::run()
 {
-  std::cout << "byte-count,test-count,mledc,crc32\n";
-  speed_tester<1>().run();
-  speed_tester<4>().run();
+  std::cout << "['', 'mledc', 'crc32', 'fletcher32'],\n";
   speed_tester<16>().run();
+  speed_tester<31>().run();
   speed_tester<64>().run();
+  speed_tester<127>().run();
   speed_tester<256>().run();
 }

@@ -68,12 +68,12 @@
     google.charts.setOnLoadCallback(drawChart);
     function drawChart() {
       var data = google.visualization.arrayToDataTable([
-        ["", 'mledc', 'crc32'],
-        ["1byte × 262144 times",52189*1e-3,371162*1e-3],
-        ["4bytes × 65536 times",53498*1e-3,342461*1e-3],
-        ["16bytes × 16384 times",102950*1e-3,589798*1e-3],
-        ["64bytes × 4096 times",269216*1e-3,975455*1e-3],
-        ["256bytes × 1024 times",357122*1e-3,1148532*1e-3],
+        ["", 'mledc', 'crc32', 'fletcher32'],
+        ['16bytes × 16384 times', 142.957, 861.599, 123.417],
+        ['31bytes × 8456 times', 308.476, 1052.31, 148.807],
+        ['64bytes × 4096 times', 403.781, 1460.46, 128.702],
+        ['127bytes × 2064 times', 540.075, 1627.19, 142.361],
+        ['256bytes × 1024 times', 531.673, 1714.15, 154.008],
       ]);
       var options = {
         hAxis: {
