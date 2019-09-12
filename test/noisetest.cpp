@@ -85,15 +85,15 @@ struct tester
       auto mcodes = make_codes(m);
       if (!count(codes, mcodes))
       {
-        debug_out(len, 1, codes, mcodes);
+        debug_out(len, "1", codes, mcodes);
       }
     }
   }
 
-  void debug_out(size_t len, size_t noise, codes_t const &o, codes_t const &m)
+  void debug_out(size_t len, std::string const & title, codes_t const &o, codes_t const &m)
   {
-    printf("\nlen=%zu noise=%zu edc=(%08x, %08x), crc=(%08x, %08x)\n", //
-           len, noise, o.edc, m.edc, o.crc, m.crc);
+    printf("\n%s: len=%zu edc=(%08x, %08x), crc=(%08x, %08x), f32=(%08x, %08x)\n", //
+           title.c_str(), len, o.edc, m.edc, o.crc, m.crc, o.f32, m.f32);
   }
 
   void test_all_2(size_t len)
@@ -110,7 +110,7 @@ struct tester
         auto mcodes = make_codes(m);
         if (!count(codes, mcodes))
         {
-          debug_out(len, 1, codes, mcodes);
+          debug_out(len, "2", codes, mcodes);
         }
       }
     }
@@ -145,6 +145,45 @@ struct tester
     return std::min<size_t>(LIM, n / d);
   }
 
+  void test_fixedbyte(size_t len, size_t noise)
+  {
+    auto const org = make(len);
+    auto m = org; // ループ内でのメモリ確保を避けるために使い回す
+    auto codes = make_codes(org);
+    auto start_dist = uniform_int_distribution<size_t>{0, len - 1};
+    auto val_dist = uniform_int_distribution<std::uint8_t>{0, 255};
+    size_t trial_count = 100;
+    for (size_t trial = 0; trial < trial_count; ++trial)
+    {
+      std::copy(org.cbegin(), org.cend(), m.begin());
+      auto start = start_dist(rng);
+      auto val = [&]()->std::uint8_t{
+        for(;;){
+          auto v = val_dist(rng);
+          auto uniq = [&]()->bool{
+            for( size_t ix=0 ; ix<noise ; ++ix ){
+              if (v == org[ix%org.size()] ){
+                return false;
+              }
+            }
+            return true;
+          }();
+          if ( uniq ){
+            return v;
+          }
+        }
+      }();
+      for( size_t ix=0 ; ix<noise ; ++ix ){
+        m[ix % m.size()] = val;
+      }
+      auto mcodes = make_codes(m);
+      if (!count(codes, mcodes))
+      {
+        debug_out(len, "b"+std::to_string(noise), codes, mcodes);
+      }
+    }
+  }
+
   void test_some(size_t len, size_t noise)
   {
     unordered_set<key_t, hasher> done;
@@ -174,7 +213,7 @@ struct tester
       auto mcodes = make_codes(m);
       if (!count(codes, mcodes))
       {
-        debug_out(len, 1, codes, mcodes);
+        debug_out(len, std::to_string(noise), codes, mcodes);
       }
     }
   }
@@ -196,21 +235,30 @@ struct tester
       test_some(len, noise);
     }
   }
+  void fixedbyte_test(size_t len)
+  {
+    for (size_t noise = 1; noise < len / 4; ++noise)
+    {
+      test_fixedbyte(len, noise);
+    }
+  }
 };
 } // namespace
 
 void noisetest::run()
 {
   tester t;
-  for (int i = 0; i < 1; ++i)
+  for (int i = 0; i < 10; ++i)
   {
     for (size_t len = 1; len < 5; ++len)
     {
       t.shorter_test(len);
+      t.fixedbyte_test(len);
     }
     for (size_t len = 5; len < 256; ++len)
     {
       t.longer_test(len);
+      t.fixedbyte_test(len);
     }
     cout << "." << flush;
   }
