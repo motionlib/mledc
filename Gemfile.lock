@@ -6,12 +6,14 @@ GEM
       tilt
     temple (0.8.1)
     tilt (2.0.9)
+    yen (0.0.2)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
   haml
+  yen
 
 BUNDLED WITH
    1.17.2
