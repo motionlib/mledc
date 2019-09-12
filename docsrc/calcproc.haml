@@ -12,6 +12,10 @@
     p, table {
       font-size:10pt;
     }
+    .right{
+      text-align:right;
+      padding-right:1em;
+    }
     h1{
       border-top : solid 2px #bbb;
       border-left : solid 16px #bbb;
@@ -48,7 +52,7 @@
     th,td{
       padding:5px;
     }
-    #barchart_body{
+    .barchart{
       padding: 1em;
       margin: 1em;
       background-color: #eee;
@@ -64,45 +68,82 @@
         inlineMath: [['$', '$'], ['\\(', '\\)']]
       }
     }
-    google.charts.load('current', {'packages':['bar']});
+    google.charts.load('current', { 'packages': ['bar'] });
     google.charts.setOnLoadCallback(drawChart);
     function drawChart() {
-      var data = google.visualization.arrayToDataTable([
-        ["", 'mledc', 'crc32'],
-        ["1byte × 262144 times",52189*1e-3,371162*1e-3],
-        ["4bytes × 65536 times",53498*1e-3,342461*1e-3],
-        ["16bytes × 16384 times",102950*1e-3,589798*1e-3],
-        ["64bytes × 4096 times",269216*1e-3,975455*1e-3],
-        ["256bytes × 1024 times",357122*1e-3,1148532*1e-3],
+      var dataM = google.visualization.arrayToDataTable([
+        ['', 'mledc', 'crc32', 'fletcher32'],
+        ['16bytes × 49152 times', 175.38, 832.933, 138.619],
+        ['31bytes × 25368 times', 308.42, 1052.48, 148.774],
+        ['64bytes × 12288 times', 393.859, 1439.83, 127.1],
+        ['127bytes × 6192 times', 494.835, 1600.48, 138.886],
+        ['256bytes × 3072 times', 539.442, 1693.1, 167.451],
       ]);
-      var options = {
-        hAxis: {
-          format: "decimal",
-        },
-        backgroundColor:"#eee",
-        bar: {groupWidth: "80%"},
-        bars: 'horizontal', // Required for Material Bar Charts.
-        axes: {
-          x: {
-            0: { side: 'top', label: 'Execution time in μs'},
-          }
-        },
+
+      var dataR = google.visualization.arrayToDataTable([
+        ['', 'mledc', 'crc32', 'fletcher32'],
+        ['16bytes × 49152 times', 1408.02, 6101.73, 959.274],
+        ['31bytes × 25368 times', 1445, 6855.69, 812.502],
+        ['64bytes × 12288 times', 2120.37, 6704.91, 1515.26],
+        ['127bytes × 6192 times', 2091.78, 6639.39, 1474.95],
+        ['256bytes × 3072 times', 2009.69, 6606.32, 1366.57],
+      ]);
+
+      var draw = function (data, pc, id) {
+        var options = {
+          hAxis: {
+            format: "decimal",
+          },
+          backgroundColor: "#eee",
+          bar: { groupWidth: "80%" },
+          bars: 'horizontal', // Required for Material Bar Charts.
+          axes: {
+            x: {
+              0: { side: 'top', label: 'Execution time in μs(' + pc + ')' },
+            }
+          },
+        };
+        var chart = new google.charts.Bar(document.getElementById(id));
+        chart.draw(data, google.charts.Bar.convertOptions(options));
       };
-      var chart = new google.charts.Bar(document.getElementById('barchart_body'));
-      chart.draw(data, google.charts.Bar.convertOptions(options));
-    }
+
+      draw(dataM, "MacBook Pro", "barchart_mac");
+      draw(dataR, "Raspberry Pi 3B+", "barchart_rp");
+    }  
   %title
     mledc
 %body
   #barchart_material
-    #barchart_body
+    #barchart_mac.barchart
+    %hr
+    #barchart_rp.barchart
   %h1 計算量
   %p
-    計算内容が簡単な上にメモリアクセスが少ないので、計算量は CRC32 と比べるとだいぶ少ない。
+    計算内容が簡単な上にメモリアクセスが少ないので、計算量は CRC32 と比べるとだいぶ少ないが、fletcher32 と比べると遅い。
     %br
-    データのフェッチが 16bit なのも大きいと思う。
+    MacBook Pro (13-inch, 2017, Two Thunderbolt 3 ports) だと mledc は fletcher32 にだいぶ負けているが、 Raspberry Pi 3B+ ではそれほど大きな差はない。
+  %h1 誤り検出性能
+  %p
+    乱数で 1〜255 バイトのデータ列を作り、そこにノイズを付加し、約1.5億回の試行を行った。
     %br
-    手元での測定( MacBook Pro (13-inch, 2017, Two Thunderbolt 3 ports), 右図 )の結果を見ると、CRC32 よりだいぶ速い。
+    誤り検出に失敗した回数は下表の通り：
+  %table
+    %tr
+      %th 誤り検出符号
+      %th 誤り検出失敗回数
+      %th 誤り検出失敗率(百万分率)
+      %th 誤り検出失敗率の逆数
+    -[["mledc", 155374419,5],["crc32", 155374424,0],["fletcher32", 155374306,118]].each do |name,ok,ng|
+      %tr
+        %th=name
+        %td.right=ng
+        %td.right="%.4f" % (ng*1e6/(ok+ng))
+        %td.right=( ng==0 ? "n/a" : ((ok+ng)/ng).round(-4).to_j )
+  %p
+    crc32 は流石。
+    %br
+    mledc は 5ミス。fletcher32 と比べると20倍ぐらい良かった。
+
   %h1 計算内容
   %h2 データの取得
   %p
@@ -115,6 +156,8 @@
     の区別はつかない。
   %p
     というわけで、入力バイト数の半分(端数切り上げ)個の、符号なし16ビット整数が手に入る
+  %p
+
   %h2 計算
   %h3 計算に必要な定数
   %p
