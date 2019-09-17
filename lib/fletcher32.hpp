@@ -9,12 +9,12 @@ namespace detail
 {
 
 inline
-std::uint32_t modffff(std::uint32_t v)
-{
-  auto f = [](std::uint32_t x) -> std::uint32_t {
-    return (x & 0xffff) + (x >> 16);
-  };
-  return f(f(v));
+std::uint32_t modffff( std::uint32_t a ) {
+  // http://homepage.divms.uiowa.edu/~jones/bcd/mod.shtml#exmod15
+  a = (a >> 16) + (a & 0xFFFF); /* sum base 2**16 digits */
+  if (a < 65535) return a;
+  if (a < (2 * 65535)) return a - 65535;
+  return a - (2 * 65535);
 }
 
 struct state
