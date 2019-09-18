@@ -9,7 +9,7 @@ loop.with_index(0) do |_, ix|
   nums[1]+=nums[0]
   nums[2]+=nums[1]
   nums[3]+=nums[2]
-  if nums.any?{ |n| 2**32<=n }
+  if nums.any?{ |n| 2**31<=n }
     p ix
     break
   end
