@@ -8,6 +8,7 @@
 #include "noisetest.h"
 #include "crc32.hpp"
 #include "fletcher32.hpp"
+#include "fletcher4.hpp"
 #include "mledc.hpp"
 
 using namespace std;
@@ -20,6 +21,7 @@ struct codes_t
   uint32_t crc;
   uint32_t edc;
   uint32_t f32;
+  uint32_t f4;
 };
 
 struct result_t
@@ -35,6 +37,7 @@ struct results_t
   result_t crc;
   result_t edc;
   result_t f32;
+  result_t f4;
 };
 
 struct tester
@@ -46,8 +49,13 @@ struct tester
   static constexpr uint32_t mledc_init = 0xe68f45bf; // 単なる乱数
   static constexpr uint32_t mledc_mul =
       0x45426bed; // ２進数で1の数が16個の素数
-  static constexpr uint16_t f32_sum1 = 0xffff;
-  static constexpr uint16_t f32_sum2 = 0xffff;
+  static constexpr uint16_t f32_sum1 = 30341; // 2進数で 1 が 8 個ある 素数
+  static constexpr uint16_t f32_sum2 = 49807; // 2進数で 1 が 8 個ある 素数
+
+  static constexpr uint16_t f4_s1 = 33739; // 2進数で 1 が 8 個ある 素数
+  static constexpr uint16_t f4_s2 = 21101; // 2進数で 1 が 8 個ある 素数
+  static constexpr uint16_t f4_s3 = 55621; // 2進数で 1 が 8 個ある 素数
+  static constexpr uint16_t f4_s4 = 16607; // 2進数で 1 が 8 個ある 素数
   crc32 crc;
 
   results_t results;
@@ -56,7 +64,8 @@ struct tester
     return {
         crc(bin.data(), bin.size()),
         mledc::calculate<mledc_init, mledc_mul>(bin.data(), bin.size()),
-        fletcher32::calculate<f32_sum1, f32_sum2>(bin.data(), bin.size())};
+        fletcher32::calculate<f32_sum1, f32_sum2>(bin.data(), bin.size()),
+        fletcher4::calculate<f4_s1, f4_s2, f4_s3, f4_s4>(bin.data(), bin.size())};
   }
   vector<uint8_t> make(size_t len)
   {
@@ -72,7 +81,8 @@ struct tester
     results.crc.accumulate(a.crc != b.crc);
     results.edc.accumulate(a.edc != b.edc);
     results.f32.accumulate(a.f32 != b.f32);
-    return a.crc != b.crc && a.edc != b.edc && a.f32 != b.f32;
+    results.f4.accumulate(a.f4 != b.f4);
+    return a.crc != b.crc && a.edc != b.edc && a.f32 != b.f32 && a.f4 != b.f4;
   }
   void test_all_1(size_t len)
   {
@@ -90,10 +100,10 @@ struct tester
     }
   }
 
-  void debug_out(size_t len, std::string const & title, codes_t const &o, codes_t const &m)
+  void debug_out(size_t len, std::string const &title, codes_t const &o, codes_t const &m)
   {
-    printf("\n%s: len=%zu edc=(%08x, %08x), crc=(%08x, %08x), f32=(%08x, %08x)\n", //
-           title.c_str(), len, o.edc, m.edc, o.crc, m.crc, o.f32, m.f32);
+    printf("\n%s: len=%zu edc=(%08x, %08x), crc=(%08x, %08x), f32=(%08x, %08x), f4=(%08x, %08x)\n", //
+           title.c_str(), len, o.edc, m.edc, o.crc, m.crc, o.f32, m.f32, o.f4, m.f4);
   }
 
   void test_all_2(size_t len)
@@ -157,29 +167,34 @@ struct tester
     {
       std::copy(org.cbegin(), org.cend(), m.begin());
       auto start = start_dist(rng);
-      auto val = [&]()->std::uint8_t{
-        for(;;){
+      auto val = [&]() -> std::uint8_t {
+        for (;;)
+        {
           auto v = val_dist(rng);
-          auto uniq = [&]()->bool{
-            for( size_t ix=0 ; ix<noise ; ++ix ){
-              if (v == org[ix%org.size()] ){
+          auto uniq = [&]() -> bool {
+            for (size_t ix = 0; ix < noise; ++ix)
+            {
+              if (v == org[ix % org.size()])
+              {
                 return false;
               }
             }
             return true;
           }();
-          if ( uniq ){
+          if (uniq)
+          {
             return v;
           }
         }
       }();
-      for( size_t ix=0 ; ix<noise ; ++ix ){
+      for (size_t ix = 0; ix < noise; ++ix)
+      {
         m[ix % m.size()] = val;
       }
       auto mcodes = make_codes(m);
       if (!count(codes, mcodes))
       {
-        debug_out(len, "b"+std::to_string(noise), codes, mcodes);
+        debug_out(len, "b" + std::to_string(noise), codes, mcodes);
       }
     }
   }
@@ -262,9 +277,10 @@ void noisetest::run()
     }
     cout << "." << flush;
   }
-  cout << "\nmledc-ok,mledc-ng,crc-ok,crc-ng,fletcher-ok,fletcher-ng\n";
+  cout << "\nmledc-ok,mledc-ng,crc-ok,crc-ng,fletcher32-ok,fletcher32-ng,fletcher4-ok,fletcher4-ng\n";
   cout //
       << t.results.edc.ok << "," << t.results.edc.ng << ","
       << t.results.crc.ok << "," << t.results.crc.ng << ","
-      << t.results.f32.ok << "," << t.results.f32.ng << endl;
+      << t.results.f32.ok << "," << t.results.f32.ng << ","
+      << t.results.f4.ok << "," << t.results.f4.ng << endl;
 }

@@ -72,21 +72,21 @@
     google.charts.setOnLoadCallback(drawChart);
     function drawChart() {
       var dataM = google.visualization.arrayToDataTable([
-        ['', 'mledc', 'crc32', 'fletcher32'],
-        ['16bytes × 49152 times', 175.38, 832.933, 138.619],
-        ['31bytes × 25368 times', 308.42, 1052.48, 148.774],
-        ['64bytes × 12288 times', 393.859, 1439.83, 127.1],
-        ['127bytes × 6192 times', 494.835, 1600.48, 138.886],
-        ['256bytes × 3072 times', 539.442, 1693.1, 167.451],
+        ['', 'mledc', 'crc32', 'fletcher32', 'fletcher4'],
+        ['16bytes × 65536 times', 190.663, 1064.3, 206.25, 918.418],
+        ['31bytes × 33824 times', 467.754, 1424.63, 187.395, 664.143],
+        ['64bytes × 16384 times', 586.122, 2040.45, 193.521, 489.942],
+        ['127bytes × 8256 times', 728.726, 2134.36, 195.22, 400.412],
+        ['256bytes × 4096 times', 707.392, 2371.52, 205.932, 351.185],
       ]);
 
       var dataR = google.visualization.arrayToDataTable([
-        ['', 'mledc', 'crc32', 'fletcher32'],
-        ['16bytes × 49152 times', 1408.02, 6101.73, 959.274],
-        ['31bytes × 25368 times', 1445, 6855.69, 812.502],
-        ['64bytes × 12288 times', 2120.37, 6704.91, 1515.26],
-        ['127bytes × 6192 times', 2091.78, 6639.39, 1474.95],
-        ['256bytes × 3072 times', 2009.69, 6606.32, 1366.57],
+        ['', 'mledc', 'crc32', 'fletcher32', 'fletcher4'],
+        ['16bytes × 65536 times', 1681.4, 6942.43, 1278.99, 2079.07],
+        ['31bytes × 33824 times', 1659.79, 7920.89, 962.632, 1588.85],
+        ['64bytes × 16384 times', 2424.28, 7716.56, 1914.63, 2650.7],
+        ['127bytes × 8256 times', 2397.83, 7633.22, 1750.41, 2783.67],
+        ['256bytes × 4096 times', 2306.16, 7584.99, 1657.28, 2608.82],
       ]);
 
       var draw = function (data, pc, id) {
@@ -113,36 +113,45 @@
   %title
     mledc
 %body
-  #barchart_material
-    #barchart_mac.barchart
-    %hr
-    #barchart_rp.barchart
-  %h1 計算量
+  %h1 各種誤り検出符号の説明
+  %h2 mledc
   %p
-    計算内容が簡単な上にメモリアクセスが少ないので、計算量は CRC32 と比べるとだいぶ少ないが、fletcher32 と比べると遅い。
-    %br
-    MacBook Pro (13-inch, 2017, Two Thunderbolt 3 ports) だと mledc は fletcher32 にだいぶ負けているが、 Raspberry Pi 3B+ ではそれほど大きな差はない。
-  %h1 誤り検出性能
+    今回発明した符号。計算内容についてはこの文書の「計算内容」の章を参照。
+  %h2 crc32
   %p
-    乱数で 1〜255 バイトのデータ列を作り、そこにノイズを付加し、約1.5億回の試行を行った。
-    %br
-    誤り検出に失敗した回数は下表の通り：
-  %table
-    %tr
-      %th 誤り検出符号
-      %th 誤り検出失敗回数
-      %th 誤り検出失敗率(百万分率)
-      %th 誤り検出失敗率の逆数
-    -[["mledc", 155374419,5],["crc32", 155374424,0],["fletcher32", 155374306,118]].each do |name,ok,ng|
-      %tr
-        %th=name
-        %td.right=ng
-        %td.right="%.4f" % (ng*1e6/(ok+ng))
-        %td.right=( ng==0 ? "n/a" : ((ok+ng)/ng).round(-4).to_j )
+    PNG などで用いられている CRC32 の計算をそのまま利用。
+  %h2 fletcher32
   %p
-    crc32 は流石。
+    16bit ずつデータを取得したデータ列(符号なし)を $x_i ( i=0..(N-1) )$ とし、
+  %p.math
+    $a_i = a_{i-1} + x_{i-1}$
     %br
-    mledc は 5ミス。fletcher32 と比べると20倍ぐらい良かった。
+    $b_i = b_{i-1} + a_{i-1}$
+  %p
+    とする。
+    %br
+    $a_0, \: b_0$ には適当な初期値を入れる。
+  %p
+    誤り検出符号の値としては、 $a_N$,\: $b_N$ を $65535$ で割った余りを並べた 32bit 整数を用いる。
+  %h2 fletcher32
+  %p
+    16bit ずつデータを取得したデータ列(符号なし)を $x_i ( i=0..(N-1) )$ とし、
+  %p.math
+    $a_i = a_{i-1} + x_{i-1}$
+    %br
+    $b_i = b_{i-1} + a_{i-1}$
+    %br
+    $c_i = c_{i-1} + b_{i-1}$
+    %br
+    $d_i = d_{i-1} + c_{i-1}$
+  %p
+    とする。
+    %br
+    $a_0, \: b_0, \: c_0, \: d_0$ には適当な初期値を入れる。
+  %p
+    誤り検出符号の値としては、 $a_N,\: b_N,\: c_N,\: d_N$ を $255$ で割った余りを並べた 32bit 整数を用いる。
+  %p
+    計算の手続きとしては、 ZFS が利用している fletcher4 とほぼ同じだが、ビット数が異なる。また、最終的な値として剰余を使っているところも違う。
 
   %h1 計算内容
   %h2 データの取得
@@ -206,3 +215,36 @@
     関数 $mod$ は剰余関数。数学っぽく書くと以下の通り:
   %p.math
     $ mod(a,\: n) = a - n \lfloor a \div n \rfloor $
+  #barchart_material
+    #barchart_mac.barchart
+    %hr
+    #barchart_rp.barchart
+  %h1 計算量
+  %p
+    mledc は、計算内容が簡単な上にメモリアクセスが少ないので、計算量は CRC32 と比べるとだいぶ少ないが、ほぼ足し算しかしていない fletcher32 と比べると遅い。
+    %br
+    MacBook Pro (13-inch, 2017, Two Thunderbolt 3 ports) だと mledc は fletcher32 にだいぶ負けているが、 Raspberry Pi 3B+ ではそれほど大きな差はない。
+  %br{ clear:"all" }
+  %h1 誤り検出性能
+  %p
+    乱数で 1〜255 バイトのデータ列を作り、そこにノイズを付加し、約1.5億回の試行を行った。
+    %br
+    誤り検出に失敗した回数は下表の通り：
+  %table
+    %tr
+      %th 誤り検出符号
+      %th 誤り検出失敗回数
+      %th 誤り検出失敗率(百万分率)
+      %th 誤り検出失敗率の逆数
+    -[["mledc", 155374419,5],["crc32", 155374424,0],["fletcher32", 155374306,118],["fletcher4",155361299,13125]].each do |name,ok,ng|
+      %tr
+        %th=name
+        %td.right=ng
+        %td.right="%.4f" % (ng*1e6/(ok+ng))
+        %td.right=( ng==0 ? "n/a" : ((ok+ng)/ng).round((ok+ng)/ng<1e5 ? -3 : -4).to_j )
+  %p
+    crc32 は流石。
+    %br
+    mledc は 5ミス。fletcher32 と比べると20倍ぐらい良かった。
+    %br
+    今回の更新で増やした fletcher4 は、非常に悪かった。速度と誤り検出能力の両面で fletcher32 に負けているので、採用はない。
