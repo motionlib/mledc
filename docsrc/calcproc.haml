@@ -61,6 +61,51 @@
     #barchart_material{
       float:right;
     }
+    table.heatmaps{
+      margin 0 0 0 0;
+      page-break-inside: avoid;
+    }
+    table.heatmaps tr{
+      background-color:white;
+    }
+    table.heatmap tr, table.heatmap td{
+      font-family:"Arial Narrow";
+      font-size:4.5pt;
+      width:10pt;
+      height:10pt;
+      text-align:center;
+      padding: 0 0 0 0;
+      margin: 0 0 0 0;
+    }
+    table.heatmap{
+      padding: 0 0 0 0;
+      margin: 0 0 0 0;
+    }
+    table.heatmap th{
+      font-size:10pt;
+      height:15pt;
+      padding: 0 0 0 0;
+      margin: 0 0 0 0;
+    }
+    table.heatmap th{
+      width:15pt;
+      text-align:center;
+      max-width:20pt;
+    }
+    div.vertical{
+      padding: 0 0 0 0;
+      margin: 0 0 0 0;
+      transform: rotate(-90deg);
+      width:400pt;
+      height:15pt;
+      left:-190pt;
+      position:relative;
+    }
+    .table_title{
+      text-align:center;
+      font-size:12pt;
+      font-weight:bold;
+    }
 
   :javascript
     window.MathJax = {
@@ -248,3 +293,33 @@
     mledc は 5ミス。fletcher32 と比べると20倍ぐらい良かった。
     %br
     今回の更新で増やした fletcher4 は、非常に悪かった。速度と誤り検出能力の両面で fletcher32 に負けているので、採用はない。
+  %h2 データ長・誤りビット数・検出失敗数
+  %p
+    データ長を、16byte〜64byte。誤りビット数を 1bit〜16bit まで変化させ、誤り検出失敗数を調査した。
+    %br
+    対象とした誤り検出符号は、 mledc と fletcher32。
+    %br
+    各条件で 100万回 試行した。
+    %br
+    結果は下表の通り：
+  %table.heatmaps
+    %tr
+      -%i(mledc f32).each do |code|
+        %td
+          %p.table_title={mledc:"mledc", f32:"fletcher32" }[code]
+          %table.heatmap
+            -ncs,lens,data=load_data()
+            %tr
+              %td
+              %th{colspan:(ncs[1]-ncs[0]+1)}
+                ノイズのビット数。左端が #{ncs[0]}。右端が#{ncs[1]}。
+            -(lens[0]..lens[1]).each do |len|
+              %tr
+                -if len==lens[0]
+                  %th.vertical{ rowspan:(lens[1]-lens[0]+1)}
+                    .vertical
+                      データ長。上端が #{lens[0]} bytes。下端が #{lens[1]} bytes。
+                -(ncs[0]..ncs[1]).each do |nc|
+                  - ngcount = data["#{nc}/#{len}"][code][1]
+                  %td{ style:"background-color:#{col(ngcount)}" }=ngcount
+
