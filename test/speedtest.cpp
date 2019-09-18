@@ -8,6 +8,7 @@
 #include "crc32.hpp"
 #include "mledc.hpp"
 #include "fletcher32.hpp"
+#include "fletcher4.hpp"
 #include "speedtest.h"
 
 using namespace std;
@@ -27,6 +28,14 @@ struct speed_tester
   using clock = chrono::steady_clock;
   static constexpr uint32_t mledc_init = 0xe68f45bf; // 単なる乱数
   static constexpr uint32_t mledc_mul = 0x45426bed;  // ２進数で、 1 の数が 16個の素数
+
+  static constexpr uint16_t f32_sum1 = 30341; // 2進数で 1 が 8 個ある 素数
+  static constexpr uint16_t f32_sum2 = 49807; // 2進数で 1 が 8 個ある 素数
+
+  static constexpr uint16_t f4_s1 = 33739; // 2進数で 1 が 8 個ある 素数
+  static constexpr uint16_t f4_s2 = 21101; // 2進数で 1 が 8 個ある 素数
+  static constexpr uint16_t f4_s3 = 55621; // 2進数で 1 が 8 個ある 素数
+  static constexpr uint16_t f4_s4 = 16607; // 2進数で 1 が 8 個ある 素数
 
   int64_t run_mledc(vector<ary> const &arrays)
   {
@@ -49,7 +58,22 @@ struct speed_tester
     auto start = clock::now();
     for (auto const &a : arrays)
     {
-      sum += fletcher32::calculate<0xffff, 0xffff>(a.data(), a.size());
+      sum += fletcher32::calculate<f32_sum1, f32_sum2>(a.data(), a.size());
+    }
+    auto end = clock::now();
+    if (sum == 0)
+    { // In order not to be killed by the optimizer
+      cout << "I was surprised!\n";
+    }
+    return chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+  }
+  int64_t run_f4(vector<ary> const &arrays)
+  {
+    std::uint32_t sum = 0;
+    auto start = clock::now();
+    for (auto const &a : arrays)
+    {
+      sum += fletcher4::calculate<f4_s1, f4_s2, f4_s3, f4_s4>(a.data(), a.size());
     }
     auto end = clock::now();
     if (sum == 0)
@@ -88,32 +112,41 @@ struct speed_tester
     run_mledc(arrays);
     run_crc(arrays);
     run_f32(arrays);
+    run_f4(arrays);
     // Action!
     auto tick_n = run_mledc(arrays);
     auto tick_c = run_crc(arrays);
     auto tick_f = run_f32(arrays);
+    auto tick_f4 = run_f4(arrays);
     // Act in a different order #1
     tick_c += run_crc(arrays);
     tick_f += run_f32(arrays);
+    tick_f4 += run_f4(arrays);
     tick_n += run_mledc(arrays);
     // Act in a different order #2
     tick_f += run_f32(arrays);
+    tick_f4 += run_f4(arrays);
     tick_n += run_mledc(arrays);
     tick_c += run_crc(arrays);
+    // Act in a different order #3
+    tick_f4 += run_f4(arrays);
+    tick_n += run_mledc(arrays);
+    tick_c += run_crc(arrays);
+    tick_f += run_f32(arrays);
 
-    // ["1bytes × 262144 times", 55331e-3,505226e-3,341696e-3],
     std::cout
-        << "['" << byteCount << "bytes × " << (testCount*3) << " times', "
+        << "['" << byteCount << "bytes × " << (testCount * 4) << " times', "
         << tick_n * 1e-3 << ", "
         << tick_c * 1e-3 << ", "
-        << tick_f * 1e-3 << "],\n";
+        << tick_f * 1e-3 << ", "
+        << tick_f4 * 1e-3 << "],\n";
   }
 };
 } // namespace
 
 void speedtest::run()
 {
-  std::cout << "['', 'mledc', 'crc32', 'fletcher32'],\n";
+  std::cout << "['', 'mledc', 'crc32', 'fletcher32', 'fletcher4'],\n";
   speed_tester<16>().run();
   speed_tester<31>().run();
   speed_tester<64>().run();

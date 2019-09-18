@@ -9,12 +9,12 @@ namespace detail
 {
 
 inline
-std::uint32_t modffff(std::uint32_t v)
-{
-  auto f = [](std::uint32_t x) -> std::uint32_t {
-    return (x & 0xffff) + (x >> 16);
-  };
-  return f(f(v));
+std::uint32_t modffff( std::uint32_t a ) {
+  // http://homepage.divms.uiowa.edu/~jones/bcd/mod.shtml#exmod15
+  a = (a >> 16) + (a & 0xFFFF); /* sum base 2**16 digits */
+  if (a < 65535) return a;
+  if (a < (2 * 65535)) return a - 65535;
+  return a - (2 * 65535);
 }
 
 struct state
@@ -41,7 +41,7 @@ struct state
  * @param[in] size 入力データのバイト数。
  * @return 計算されたエラー検出値。
  */
-template <std::uint16_t sum1, std::uint32_t sum2>
+template <std::uint16_t sum1, std::uint16_t sum2>
 inline std::uint32_t calculate(std::uint8_t const *data, std::uint32_t size)
 {
   detail::state s(sum1, sum2);
