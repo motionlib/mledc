@@ -1,6 +1,6 @@
 #pragma once
 
-namespace noisetest
+namespace noisetest2
 {
   void run(int trial_count);
 }

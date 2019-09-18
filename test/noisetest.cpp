@@ -260,10 +260,13 @@ struct tester
 };
 } // namespace
 
-void noisetest::run()
+void noisetest::run(int trial_count)
 {
+  if ( trial_count<=0 ){
+    return;
+  }
   tester t;
-  for (int i = 0; i < 100; ++i)
+  for (int i = 0; i < trial_count; ++i)
   {
     for (size_t len = 1; len < 5; ++len)
     {

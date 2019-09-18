@@ -3,6 +3,6 @@
 set -e
 HERE=$(cd $(dirname $0); pwd)
 
-cd $HERE
+cd $HERE/docsrc
 
-bundle exec haml -r yen -Eutf-8 docsrc/calcproc.haml > htmldoc/calcproc.html
+bundle exec haml -r ./calcproc -r yen -Eutf-8 calcproc.haml > ../htmldoc/calcproc.html
