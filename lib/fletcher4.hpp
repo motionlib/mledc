@@ -4,6 +4,9 @@
 #include <cstdint>
 #include <algorithm>
 
+
+//#define SLOW_SIMPLE_FLETCHER4 1
+
 namespace fletcher4
 {
 namespace detail
@@ -11,7 +14,9 @@ namespace detail
 
 inline uint32_t mod255(uint32_t a)
 {
+#if defined SLOW_SIMPLE_FLETCHER4
   return a % 255;
+#else
   // http://homepage.divms.uiowa.edu/~jones/bcd/mod.shtml#exmod15
   a = (a >> 16) + (a & 0xFFFF); /* sum base 2**16 digits */
   a = (a >> 8) + (a & 0xFF);    /* sum base 2**8 digits */
@@ -20,16 +25,23 @@ inline uint32_t mod255(uint32_t a)
   if (a < (2 * 255))
     return a - 255;
   return a - (2 * 255);
+#endif
 }
 
 inline uint32_t weak_mod255(uint32_t a)
 {
-  return (a >> 16) + (a & 0xFFFF);
+#if defined SLOW_SIMPLE_FLETCHER4
+  return a % 255;
+#else
+  auto b = (a >> 16) + (a & 0xFFFF);
+  return (b>>8) + (b & 0xff);
+#endif
 }
 
 struct state
 {
   std::uint32_t s_[4];
+  state() = delete;
   explicit state(std::uint16_t a, std::uint16_t b, std::uint16_t c, std::uint16_t d)
       : s_{a, b, c, d} {}
   void update(std::uint16_t val)
@@ -61,13 +73,24 @@ struct state
  * @param[in] size 入力データのバイト数。
  * @return 計算されたエラー検出値。
  */
-template <std::uint16_t sum1, std::uint32_t sum2, std::uint32_t sum3, std::uint32_t sum4>
+template <std::uint16_t sum1, std::uint16_t sum2, std::uint16_t sum3, std::uint16_t sum4>
 inline std::uint32_t calculate(std::uint8_t const *data, std::uint32_t size)
 {
   detail::state s(sum1,sum2,sum3,sum4);
   // NOTE: Endian dependent code
   auto p = reinterpret_cast<std::uint16_t const *>(data);
-  constexpr std::uint32_t overflow_limit = 69;
+#if defined SLOW_SIMPLE_FLETCHER4
+  for (std::uint32_t i = 0; i < size / 2; ++i)
+  {
+    s.update(p[i]);
+    s.weak_mod();
+  }
+  if (size & 1)
+  {
+    s.update(data[size - 1]);
+  }
+#else
+  constexpr std::uint32_t overflow_limit = 55;
   for (std::uint32_t i = 0; i < size / 2; i += overflow_limit)
   {
     std::uint32_t last = std::min<std::uint32_t>(size / 2, i + overflow_limit);
@@ -81,6 +104,7 @@ inline std::uint32_t calculate(std::uint8_t const *data, std::uint32_t size)
   {
     s.update(data[size - 1]);
   }
+#endif
   return s.value();
 }
 
