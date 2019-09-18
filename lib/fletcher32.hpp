@@ -41,7 +41,7 @@ struct state
  * @param[in] size 入力データのバイト数。
  * @return 計算されたエラー検出値。
  */
-template <std::uint16_t sum1, std::uint32_t sum2>
+template <std::uint16_t sum1, std::uint16_t sum2>
 inline std::uint32_t calculate(std::uint8_t const *data, std::uint32_t size)
 {
   detail::state s(sum1, sum2);
